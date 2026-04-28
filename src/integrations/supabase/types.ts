@@ -14,7 +14,144 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      budgets: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string
+          cycle_key: string | null
+          id: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string
+          cycle_key?: string | null
+          id?: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string
+          cycle_key?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      recurring_transactions: {
+        Row: {
+          active: boolean
+          amount: number
+          category: string
+          created_at: string
+          day_of_cycle: number
+          description: string | null
+          id: string
+          type: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          category: string
+          created_at?: string
+          day_of_cycle?: number
+          description?: string | null
+          id?: string
+          type: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          category?: string
+          created_at?: string
+          day_of_cycle?: number
+          description?: string | null
+          id?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: Json | null
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json | null
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          cycle_key: string | null
+          date: string
+          description: string | null
+          id: string
+          is_recurring: boolean
+          source_recurring_id: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          cycle_key?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          is_recurring?: boolean
+          source_recurring_id?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          cycle_key?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          is_recurring?: boolean
+          source_recurring_id?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
