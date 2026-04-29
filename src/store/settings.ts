@@ -18,6 +18,8 @@ export interface AppSettings {
     cycleComparison: boolean;
     savingsRate: boolean;
     burnRate: boolean;
+    dailyTrend: boolean;
+    dailyCumulative: boolean;
   };
   dashboardCards: {
     balance: boolean;
