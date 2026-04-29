@@ -222,7 +222,7 @@ export default function Analytics() {
                   <Area type="monotone" dataKey="Net" stroke="hsl(var(--chart-2))" strokeWidth={2} fill="url(#cumNet)" />
                   <Line type="monotone" dataKey="Income" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="Expense" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={false} />
-                </AreaChart>
+                </ComposedChart>
               </ResponsiveContainer>
             )}
           </ChartCard>
