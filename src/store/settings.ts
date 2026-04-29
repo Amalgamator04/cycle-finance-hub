@@ -43,7 +43,7 @@ const DEFAULTS: AppSettings = {
   spendingAlerts: true,
   recurringAutoGen: true,
   defaultDateFilter: "cycle",
-  charts: { cycleTrend: true, expenseBreakdown: true, cycleComparison: true, savingsRate: true, burnRate: true },
+  charts: { cycleTrend: true, expenseBreakdown: true, cycleComparison: true, savingsRate: true, burnRate: true, dailyTrend: true, dailyCumulative: true },
   dashboardCards: { balance: true, income: true, expense: true, savings: true, cycleProgress: true, budget: true, insights: true, recent: true },
 };
 
