@@ -7,7 +7,7 @@ import { buildCycleSeries, categoryBreakdown, savingsRate, topCategory, totalsFo
 import { formatCurrency, formatPercent } from "@/lib/format";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
-  PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area,
+  PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area, ComposedChart,
 } from "recharts";
 import { format, parseISO, eachDayOfInterval, min as dateMin, max as dateMax } from "date-fns";
 
