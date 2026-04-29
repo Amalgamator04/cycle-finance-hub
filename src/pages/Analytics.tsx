@@ -36,6 +36,41 @@ export default function Analytics() {
   }));
   const burnRateData = series.map((s) => ({ name: format(s.cycle.start, "MMM"), "Burn/day": Math.round(s.avgDaily) }));
 
+  // Daywise series for filtered range
+  const dailyData = useMemo(() => {
+    if (!filtered.length) return [];
+    const dates = filtered.map((t) => parseISO(t.date));
+    const start = dateMin(dates);
+    const end = dateMax(dates);
+    const days = eachDayOfInterval({ start, end });
+    const map = new Map<string, { Income: number; Expense: number; Savings: number }>();
+    for (const d of days) map.set(format(d, "yyyy-MM-dd"), { Income: 0, Expense: 0, Savings: 0 });
+    for (const t of filtered) {
+      const key = t.date;
+      const row = map.get(key);
+      if (!row) continue;
+      const amt = Number(t.amount);
+      if (t.type === "income") row.Income += amt;
+      else if (t.type === "expense") row.Expense += amt;
+      else if (t.type === "savings") row.Savings += amt;
+    }
+    return Array.from(map.entries()).map(([date, v]) => ({
+      date,
+      name: format(parseISO(date), "MMM d"),
+      Income: Math.round(v.Income),
+      Expense: Math.round(v.Expense),
+      Savings: Math.round(v.Savings),
+    }));
+  }, [filtered]);
+
+  const dailyCumulative = useMemo(() => {
+    let inc = 0, exp = 0, sav = 0;
+    return dailyData.map((d) => {
+      inc += d.Income; exp += d.Expense; sav += d.Savings;
+      return { name: d.name, Income: inc, Expense: exp, Savings: sav, Net: inc - exp - sav };
+    });
+  }, [dailyData]);
+
   const filteredTotals = totalsForTransactions(filtered);
   const top = topCategory(filtered, "expense");
 
