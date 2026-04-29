@@ -7,9 +7,9 @@ import { buildCycleSeries, categoryBreakdown, savingsRate, topCategory, totalsFo
 import { formatCurrency, formatPercent } from "@/lib/format";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
-  PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area,
+  PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area, ComposedChart,
 } from "recharts";
-import { format } from "date-fns";
+import { format, parseISO, eachDayOfInterval, min as dateMin, max as dateMax } from "date-fns";
 
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--chart-6))"];
 
@@ -35,6 +35,41 @@ export default function Analytics() {
     Rate: Number(savingsRate(s.totals).toFixed(1)),
   }));
   const burnRateData = series.map((s) => ({ name: format(s.cycle.start, "MMM"), "Burn/day": Math.round(s.avgDaily) }));
+
+  // Daywise series for filtered range
+  const dailyData = useMemo(() => {
+    if (!filtered.length) return [];
+    const dates = filtered.map((t) => parseISO(t.date));
+    const start = dateMin(dates);
+    const end = dateMax(dates);
+    const days = eachDayOfInterval({ start, end });
+    const map = new Map<string, { Income: number; Expense: number; Savings: number }>();
+    for (const d of days) map.set(format(d, "yyyy-MM-dd"), { Income: 0, Expense: 0, Savings: 0 });
+    for (const t of filtered) {
+      const key = t.date;
+      const row = map.get(key);
+      if (!row) continue;
+      const amt = Number(t.amount);
+      if (t.type === "income") row.Income += amt;
+      else if (t.type === "expense") row.Expense += amt;
+      else if (t.type === "savings") row.Savings += amt;
+    }
+    return Array.from(map.entries()).map(([date, v]) => ({
+      date,
+      name: format(parseISO(date), "MMM d"),
+      Income: Math.round(v.Income),
+      Expense: Math.round(v.Expense),
+      Savings: Math.round(v.Savings),
+    }));
+  }, [filtered]);
+
+  const dailyCumulative = useMemo(() => {
+    let inc = 0, exp = 0, sav = 0;
+    return dailyData.map((d) => {
+      inc += d.Income; exp += d.Expense; sav += d.Savings;
+      return { name: d.name, Income: inc, Expense: exp, Savings: sav, Net: inc - exp - sav };
+    });
+  }, [dailyData]);
 
   const filteredTotals = totalsForTransactions(filtered);
   const top = topCategory(filtered, "expense");
@@ -147,6 +182,49 @@ export default function Analytics() {
                 <Line type="monotone" dataKey="Burn/day" stroke="hsl(var(--chart-3))" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
+          </ChartCard>
+        )}
+        {charts.dailyTrend && (
+          <ChartCard title="Daywise trend" subtitle="Per-day income, expense & savings in current view">
+            {!dailyData.length ? <Empty /> : (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={dailyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} interval="preserveStartEnd" />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} formatter={(v: any) => formatCurrency(Number(v), symbol)} />
+                  <Legend />
+                  <Bar dataKey="Income" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Expense" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Savings" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+        )}
+
+        {charts.dailyCumulative && (
+          <ChartCard title="Daywise cumulative" subtitle="Running totals across the selected range">
+            {!dailyCumulative.length ? <Empty /> : (
+              <ResponsiveContainer width="100%" height={260}>
+                <ComposedChart data={dailyCumulative}>
+                  <defs>
+                    <linearGradient id="cumNet" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.6} />
+                      <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} interval="preserveStartEnd" />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} formatter={(v: any) => formatCurrency(Number(v), symbol)} />
+                  <Legend />
+                  <Area type="monotone" dataKey="Net" stroke="hsl(var(--chart-2))" strokeWidth={2} fill="url(#cumNet)" />
+                  <Line type="monotone" dataKey="Income" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="Expense" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
           </ChartCard>
         )}
       </div>
