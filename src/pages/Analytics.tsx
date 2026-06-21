@@ -1,15 +1,21 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { GlobalFilters } from "@/components/GlobalFilters";
 import { useTransactions } from "@/hooks/useFinance";
 import { useFilteredTransactions } from "@/hooks/useFilteredTransactions";
+import { useFilters } from "@/store/filters";
 import { useSettings } from "@/store/settings";
 import { buildCycleSeries, categoryBreakdown, savingsRate, topCategory, totalsForTransactions } from "@/lib/analytics";
+import { getCurrentCycle } from "@/lib/cycle";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Download, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { exportElementToPdf } from "@/lib/pdfExport";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
   PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area, ComposedChart,
 } from "recharts";
-import { format, parseISO, eachDayOfInterval, min as dateMin, max as dateMax } from "date-fns";
+import { format, parseISO, eachDayOfInterval, min as dateMin, max as dateMax, subDays } from "date-fns";
 
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--chart-6))"];
 
@@ -17,8 +23,11 @@ export default function Analytics() {
   const { data: txs = [] } = useTransactions();
   const filtered = useFilteredTransactions(txs);
   const settings = useSettings((s) => s.settings);
+  const f = useFilters();
   const symbol = settings.currencySymbol;
   const { charts } = settings;
+  const dailyRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
 
   const series = useMemo(() => buildCycleSeries(txs, settings.salaryDay, 6), [txs, settings.salaryDay]);
 
@@ -86,9 +95,57 @@ export default function Analytics() {
   const expDelta = prev ? ((last.totals.expense - prev.totals.expense) / Math.max(1, prev.totals.expense)) * 100 : 0;
   const avgSr = series.length ? series.reduce((s, c) => s + savingsRate(c.totals), 0) / series.length : 0;
 
+  const rangeLabel = useMemo(() => {
+    const cycle = getCurrentCycle(settings.salaryDay);
+    const today = new Date();
+    if (f.dateRange === "7d") return `${format(subDays(today, 6), "MMM d")} – ${format(today, "MMM d, yyyy")}`;
+    if (f.dateRange === "30d") return `${format(subDays(today, 29), "MMM d")} – ${format(today, "MMM d, yyyy")}`;
+    if (f.dateRange === "cycle") return `${format(cycle.start, "MMM d")} – ${format(cycle.end, "MMM d, yyyy")} (cycle)`;
+    if (f.dateRange === "custom" && f.customStart && f.customEnd)
+      return `${format(parseISO(f.customStart), "MMM d")} – ${format(parseISO(f.customEnd), "MMM d, yyyy")}`;
+    return "All";
+  }, [f, settings.salaryDay]);
+
+  const dailyInsights = useMemo(() => {
+    if (!dailyData.length) return null;
+    const totalExp = dailyData.reduce((a, b) => a + b.Expense, 0);
+    const totalInc = dailyData.reduce((a, b) => a + b.Income, 0);
+    const totalSav = dailyData.reduce((a, b) => a + b.Savings, 0);
+    const activeDays = dailyData.filter((d) => d.Expense > 0).length || 1;
+    const avgDaily = totalExp / activeDays;
+    const peak = dailyData.reduce((acc, d) => (d.Expense > acc.Expense ? d : acc), dailyData[0]);
+    const zeroDays = dailyData.filter((d) => d.Expense === 0).length;
+    return { totalExp, totalInc, totalSav, avgDaily, peak, zeroDays, days: dailyData.length };
+  }, [dailyData]);
+
+  const handleExportPdf = async () => {
+    if (!dailyRef.current) return;
+    if (!dailyData.length) { toast.error("No data in current range to export"); return; }
+    try {
+      setExporting(true);
+      await exportElementToPdf(
+        dailyRef.current,
+        `daily-analytics-${format(new Date(), "yyyyMMdd-HHmm")}.pdf`,
+        "Daily Analytics Report",
+        [`Range: ${rangeLabel}`, `Generated: ${format(new Date(), "PPpp")}`, `Currency: ${symbol}`],
+      );
+      toast.success("PDF exported");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Analytics</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">Analytics</h1>
+        <Button onClick={handleExportPdf} disabled={exporting} className="gap-2">
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          Export daily analytics
+        </Button>
+      </div>
       <GlobalFilters />
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -184,8 +241,27 @@ export default function Analytics() {
             </ResponsiveContainer>
           </ChartCard>
         )}
-        {charts.dailyTrend && (
-          <ChartCard title="Daywise trend" subtitle="Per-day income, expense & savings in current view">
+      </div>
+
+      <div ref={dailyRef} className="space-y-3 rounded-2xl bg-background p-3">
+        <div>
+          <h2 className="text-lg font-semibold">Daily Analytics</h2>
+          <p className="text-xs text-muted-foreground">{rangeLabel}</p>
+        </div>
+
+        {dailyInsights && (
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-6">
+            <Stat label="Days in view" value={String(dailyInsights.days)} />
+            <Stat label="Total expense" value={formatCurrency(dailyInsights.totalExp, symbol)} />
+            <Stat label="Total income" value={formatCurrency(dailyInsights.totalInc, symbol)} />
+            <Stat label="Total savings" value={formatCurrency(dailyInsights.totalSav, symbol)} />
+            <Stat label="Avg / active day" value={formatCurrency(dailyInsights.avgDaily, symbol)} />
+            <Stat label="Peak day" value={dailyInsights.peak.name} sub={formatCurrency(dailyInsights.peak.Expense, symbol)} />
+          </div>
+        )}
+
+        <div className="grid gap-3 lg:grid-cols-2">
+          <ChartCard title="Daywise trend" subtitle="Per-day income, expense & savings">
             {!dailyData.length ? <Empty /> : (
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={dailyData}>
@@ -201,9 +277,7 @@ export default function Analytics() {
               </ResponsiveContainer>
             )}
           </ChartCard>
-        )}
 
-        {charts.dailyCumulative && (
           <ChartCard title="Daywise cumulative" subtitle="Running totals across the selected range">
             {!dailyCumulative.length ? <Empty /> : (
               <ResponsiveContainer width="100%" height={260}>
@@ -226,6 +300,18 @@ export default function Analytics() {
               </ResponsiveContainer>
             )}
           </ChartCard>
+        </div>
+
+        {dailyInsights && (
+          <div className="kpi-card text-sm">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Key insights</div>
+            <ul className="space-y-1 list-disc pl-5">
+              <li>Spent {formatCurrency(dailyInsights.totalExp, symbol)} across {dailyInsights.days} day{dailyInsights.days === 1 ? "" : "s"}, averaging {formatCurrency(dailyInsights.avgDaily, symbol)} per active day.</li>
+              <li>Peak spend day was <strong>{dailyInsights.peak.name}</strong> at {formatCurrency(dailyInsights.peak.Expense, symbol)}.</li>
+              <li>{dailyInsights.zeroDays} zero-spend day{dailyInsights.zeroDays === 1 ? "" : "s"} in this range.</li>
+              <li>Net flow: {formatCurrency(dailyInsights.totalInc - dailyInsights.totalExp - dailyInsights.totalSav, symbol)} (Income − Expense − Savings).</li>
+            </ul>
+          </div>
         )}
       </div>
     </div>
