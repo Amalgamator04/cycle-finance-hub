@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function TransactionDialog({ open, onOpenChange, initial }: Props) {
-  const { data: categories = [] } = useCategories();
+  const { data: categories = [], isLoading: catsLoading } = useCategories();
   const upsert = useUpsertTransaction();
   const [type, setType] = useState<Transaction["type"]>("expense");
   const [amount, setAmount] = useState("");
