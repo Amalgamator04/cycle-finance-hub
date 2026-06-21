@@ -140,6 +140,8 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      <InvestmentSuggestions available={cur.balance} symbol={symbol} />
+
 
       {cards.recent && (
         <div className="kpi-card">
