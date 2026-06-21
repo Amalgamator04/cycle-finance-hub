@@ -285,6 +285,78 @@ export default function Analytics() {
           </ChartCard>
         )}
       </div>
+
+      <div ref={dailyRef} className="space-y-3 rounded-2xl bg-background p-3">
+        <div>
+          <h2 className="text-lg font-semibold">Daily Analytics</h2>
+          <p className="text-xs text-muted-foreground">{rangeLabel}</p>
+        </div>
+
+        {dailyInsights && (
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-6">
+            <Stat label="Days in view" value={String(dailyInsights.days)} />
+            <Stat label="Total expense" value={formatCurrency(dailyInsights.totalExp, symbol)} />
+            <Stat label="Total income" value={formatCurrency(dailyInsights.totalInc, symbol)} />
+            <Stat label="Total savings" value={formatCurrency(dailyInsights.totalSav, symbol)} />
+            <Stat label="Avg / active day" value={formatCurrency(dailyInsights.avgDaily, symbol)} />
+            <Stat label="Peak day" value={dailyInsights.peak.name} sub={formatCurrency(dailyInsights.peak.Expense, symbol)} />
+          </div>
+        )}
+
+        <div className="grid gap-3 lg:grid-cols-2">
+          <ChartCard title="Daywise trend" subtitle="Per-day income, expense & savings">
+            {!dailyData.length ? <Empty /> : (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={dailyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} interval="preserveStartEnd" />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} formatter={(v: any) => formatCurrency(Number(v), symbol)} />
+                  <Legend />
+                  <Bar dataKey="Income" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Expense" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Savings" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+
+          <ChartCard title="Daywise cumulative" subtitle="Running totals across the selected range">
+            {!dailyCumulative.length ? <Empty /> : (
+              <ResponsiveContainer width="100%" height={260}>
+                <ComposedChart data={dailyCumulative}>
+                  <defs>
+                    <linearGradient id="cumNet" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.6} />
+                      <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} interval="preserveStartEnd" />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} formatter={(v: any) => formatCurrency(Number(v), symbol)} />
+                  <Legend />
+                  <Area type="monotone" dataKey="Net" stroke="hsl(var(--chart-2))" strokeWidth={2} fill="url(#cumNet)" />
+                  <Line type="monotone" dataKey="Income" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="Expense" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+        </div>
+
+        {dailyInsights && (
+          <div className="kpi-card text-sm">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Key insights</div>
+            <ul className="space-y-1 list-disc pl-5">
+              <li>Spent {formatCurrency(dailyInsights.totalExp, symbol)} across {dailyInsights.days} day{dailyInsights.days === 1 ? "" : "s"}, averaging {formatCurrency(dailyInsights.avgDaily, symbol)} per active day.</li>
+              <li>Peak spend day was <strong>{dailyInsights.peak.name}</strong> at {formatCurrency(dailyInsights.peak.Expense, symbol)}.</li>
+              <li>{dailyInsights.zeroDays} zero-spend day{dailyInsights.zeroDays === 1 ? "" : "s"} in this range.</li>
+              <li>Net flow: {formatCurrency(dailyInsights.totalInc - dailyInsights.totalExp - dailyInsights.totalSav, symbol)} (Income − Expense − Savings).</li>
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
