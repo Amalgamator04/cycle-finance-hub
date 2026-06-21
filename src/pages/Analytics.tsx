@@ -95,9 +95,57 @@ export default function Analytics() {
   const expDelta = prev ? ((last.totals.expense - prev.totals.expense) / Math.max(1, prev.totals.expense)) * 100 : 0;
   const avgSr = series.length ? series.reduce((s, c) => s + savingsRate(c.totals), 0) / series.length : 0;
 
+  const rangeLabel = useMemo(() => {
+    const cycle = getCurrentCycle(settings.salaryDay);
+    const today = new Date();
+    if (f.dateRange === "7d") return `${format(subDays(today, 6), "MMM d")} – ${format(today, "MMM d, yyyy")}`;
+    if (f.dateRange === "30d") return `${format(subDays(today, 29), "MMM d")} – ${format(today, "MMM d, yyyy")}`;
+    if (f.dateRange === "cycle") return `${format(cycle.start, "MMM d")} – ${format(cycle.end, "MMM d, yyyy")} (cycle)`;
+    if (f.dateRange === "custom" && f.customStart && f.customEnd)
+      return `${format(parseISO(f.customStart), "MMM d")} – ${format(parseISO(f.customEnd), "MMM d, yyyy")}`;
+    return "All";
+  }, [f, settings.salaryDay]);
+
+  const dailyInsights = useMemo(() => {
+    if (!dailyData.length) return null;
+    const totalExp = dailyData.reduce((a, b) => a + b.Expense, 0);
+    const totalInc = dailyData.reduce((a, b) => a + b.Income, 0);
+    const totalSav = dailyData.reduce((a, b) => a + b.Savings, 0);
+    const activeDays = dailyData.filter((d) => d.Expense > 0).length || 1;
+    const avgDaily = totalExp / activeDays;
+    const peak = dailyData.reduce((acc, d) => (d.Expense > acc.Expense ? d : acc), dailyData[0]);
+    const zeroDays = dailyData.filter((d) => d.Expense === 0).length;
+    return { totalExp, totalInc, totalSav, avgDaily, peak, zeroDays, days: dailyData.length };
+  }, [dailyData]);
+
+  const handleExportPdf = async () => {
+    if (!dailyRef.current) return;
+    if (!dailyData.length) { toast.error("No data in current range to export"); return; }
+    try {
+      setExporting(true);
+      await exportElementToPdf(
+        dailyRef.current,
+        `daily-analytics-${format(new Date(), "yyyyMMdd-HHmm")}.pdf`,
+        "Daily Analytics Report",
+        [`Range: ${rangeLabel}`, `Generated: ${format(new Date(), "PPpp")}`, `Currency: ${symbol}`],
+      );
+      toast.success("PDF exported");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Analytics</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">Analytics</h1>
+        <Button onClick={handleExportPdf} disabled={exporting} className="gap-2">
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          Export daily analytics
+        </Button>
+      </div>
       <GlobalFilters />
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
