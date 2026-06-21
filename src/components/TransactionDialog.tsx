@@ -89,7 +89,9 @@ export function TransactionDialog({ open, onOpenChange, initial }: Props) {
             <Select value={category || undefined} onValueChange={setCategory}>
               <SelectTrigger><SelectValue placeholder="Pick category" /></SelectTrigger>
               <SelectContent className="pointer-events-auto z-[60] max-h-72">
-                {filteredCats.length === 0 ? (
+                {catsLoading ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">Loading…</div>
+                ) : filteredCats.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">No {type} categories. Add one in Categories.</div>
                 ) : filteredCats.map((c) => (
                   <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
