@@ -241,49 +241,6 @@ export default function Analytics() {
             </ResponsiveContainer>
           </ChartCard>
         )}
-        {charts.dailyTrend && (
-          <ChartCard title="Daywise trend" subtitle="Per-day income, expense & savings in current view">
-            {!dailyData.length ? <Empty /> : (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={dailyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} interval="preserveStartEnd" />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} formatter={(v: any) => formatCurrency(Number(v), symbol)} />
-                  <Legend />
-                  <Bar dataKey="Income" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Expense" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Savings" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
-        )}
-
-        {charts.dailyCumulative && (
-          <ChartCard title="Daywise cumulative" subtitle="Running totals across the selected range">
-            {!dailyCumulative.length ? <Empty /> : (
-              <ResponsiveContainer width="100%" height={260}>
-                <ComposedChart data={dailyCumulative}>
-                  <defs>
-                    <linearGradient id="cumNet" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.6} />
-                      <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} interval="preserveStartEnd" />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} formatter={(v: any) => formatCurrency(Number(v), symbol)} />
-                  <Legend />
-                  <Area type="monotone" dataKey="Net" stroke="hsl(var(--chart-2))" strokeWidth={2} fill="url(#cumNet)" />
-                  <Line type="monotone" dataKey="Income" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="Expense" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
-        )}
       </div>
 
       <div ref={dailyRef} className="space-y-3 rounded-2xl bg-background p-3">
