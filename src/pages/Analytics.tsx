@@ -1,15 +1,21 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { GlobalFilters } from "@/components/GlobalFilters";
 import { useTransactions } from "@/hooks/useFinance";
 import { useFilteredTransactions } from "@/hooks/useFilteredTransactions";
+import { useFilters } from "@/store/filters";
 import { useSettings } from "@/store/settings";
 import { buildCycleSeries, categoryBreakdown, savingsRate, topCategory, totalsForTransactions } from "@/lib/analytics";
+import { getCurrentCycle } from "@/lib/cycle";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Download, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { exportElementToPdf } from "@/lib/pdfExport";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
   PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area, ComposedChart,
 } from "recharts";
-import { format, parseISO, eachDayOfInterval, min as dateMin, max as dateMax } from "date-fns";
+import { format, parseISO, eachDayOfInterval, min as dateMin, max as dateMax, subDays } from "date-fns";
 
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--chart-6))"];
 
@@ -17,8 +23,11 @@ export default function Analytics() {
   const { data: txs = [] } = useTransactions();
   const filtered = useFilteredTransactions(txs);
   const settings = useSettings((s) => s.settings);
+  const f = useFilters();
   const symbol = settings.currencySymbol;
   const { charts } = settings;
+  const dailyRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
 
   const series = useMemo(() => buildCycleSeries(txs, settings.salaryDay, 6), [txs, settings.salaryDay]);
 
