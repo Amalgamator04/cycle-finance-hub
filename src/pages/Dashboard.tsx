@@ -11,6 +11,7 @@ import { TrendingUp, TrendingDown, PiggyBank, Wallet, Plus, AlertTriangle, Check
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { TransactionDialog } from "@/components/TransactionDialog";
+import { InvestmentSuggestions } from "@/components/InvestmentSuggestions";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -139,6 +140,8 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      <InvestmentSuggestions available={cur.balance} symbol={symbol} />
+
 
       {cards.recent && (
         <div className="kpi-card">
